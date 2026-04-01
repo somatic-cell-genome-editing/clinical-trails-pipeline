@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 
 public class Main {
 
-    String source;
+    String action;
 
 
     ClinicalTrailDAO clinicalTrailDAO=new ClinicalTrailDAO();
@@ -41,12 +41,13 @@ public class Main {
         new XmlBeanDefinitionReader(bf) .loadBeanDefinitions(new FileSystemResource("properties/AppConfigure.xml"));
         Main manager= (Main) bf.getBean("manager");
 
-        manager.source=args[0];
+        manager.action=args[0];
 
 
+        System.out.println("source:"+manager.action);
 
         try {
-            manager.run();
+            manager.run(args);
         } catch (Exception e) {
 
             e.printStackTrace();
@@ -54,19 +55,19 @@ public class Main {
 
     }
 
-    public void run() throws Exception {
+    public void run(String[] args) throws Exception {
         long start = System.currentTimeMillis();
      //   String fileName="data/GT_tracker_release2_WIP.xlsx";
-        String fileName=System.getenv("FILE_NAME");
-        logger.info("FILE NAME:"+ fileName);
-
-        switch (source) {
+        String fileName=null;
+        switch (action) {
             case "api" :
                 /* download all data from clinical trails API and load to database. */
                     download();
                     break;
 
             case "file1" :
+                 fileName=System.getenv("FILE_NAME");
+                logger.info("FILE NAME:"+ fileName);
                 /*read NCTIDS from Excel sheet */
                 List<String> nctIds= parseNCTIds(fileName);
                 logger.info("NCTIDS:"+ nctIds);
@@ -77,6 +78,8 @@ public class Main {
 
                 break;
             case "release2_file" :
+                 fileName=System.getenv("FILE_NAME");
+                logger.info("FILE NAME:"+ fileName);
                 extractNewFieldsFromFile(fileName,"updated on STAGE" );
 
                 break;
@@ -95,11 +98,11 @@ public class Main {
                 break;
             case "update-ct-status" :
                 String recordStatus = "NotForCuration";
-                /* read from CSV file and update clinical trial record status in DB */
-                String csvFile = "data/platform-ct-status.csv";
-                logger.info("Updating clinical trial status from CSV: " + csvFile);
-                fileProcess.parseCSVAndUpdateStatus(csvFile, recordStatus);
-                logger.info("Clinical trial status update from CSV is DONE!!");
+                 fileName=args[1];
+                /* read from CSV or Excel file and update clinical trial record status in DB */
+                logger.info("Updating clinical trial status from file: " + fileName);
+                fileProcess.parseCSVAndUpdateStatus(fileName, recordStatus);
+                logger.info("Clinical trial status update from file is DONE!!");
                 break;
             default :
         }

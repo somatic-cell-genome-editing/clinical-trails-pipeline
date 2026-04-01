@@ -487,8 +487,51 @@ public class ProcessFile {
     }
 
 
-    public void parseCSVAndUpdateStatus(String csvFile, String recordStatus) throws Exception {
+    public void parseCSVAndUpdateStatus(String file, String recordStatus) throws Exception {
 
+        if (file.endsWith(".xlsx") || file.endsWith(".xls")) {
+            parseExcelAndUpdateStatus(file, recordStatus);
+        } else {
+            parseCSVFileAndUpdateStatus(file, recordStatus);
+        }
+    }
+
+    public void parseExcelAndUpdateStatus(String excelFile, String recordStatus) throws Exception {
+        System.out.println("Processing Excel file to update clinical trial status fields: " + excelFile);
+        FileInputStream fs = new FileInputStream(new File(excelFile));
+        XSSFWorkbook workbook = new XSSFWorkbook(fs);
+        XSSFSheet sheet = workbook.getSheetAt(0);
+        int rowNum = 0;
+        for (Row row : sheet) {
+            if (row.getRowNum() == 0) {
+                // skip header row
+                continue;
+            }
+            Cell cell = row.getCell(0);
+            if (cell == null) continue;
+            String nctId = String.valueOf(cell).trim();
+            if (nctId.isEmpty() || nctId.equals("null")) {
+                continue;
+            }
+
+            ClinicalTrialRecord record = new ClinicalTrialRecord();
+            record.setNctId(nctId);
+            record.setRecordStatus(recordStatus);
+
+            try {
+                rowNum++;
+                System.out.println("ROW " + rowNum + "\t" + nctId + "\tRecord Status:" + recordStatus);
+                clinicalTrailDAO.updateRecordStatus(record);
+            } catch (Exception e) {
+                System.out.println("Error updating: " + nctId);
+                e.printStackTrace();
+            }
+        }
+        fs.close();
+        System.out.println("Excel status update complete. Processed " + rowNum + " records.");
+    }
+
+    public void parseCSVFileAndUpdateStatus(String csvFile, String recordStatus) throws Exception {
         System.out.println("Processing CSV file to update clinical trial status fields: " + csvFile);
         BufferedReader br = new BufferedReader(new FileReader(csvFile));
         String line;
@@ -500,23 +543,20 @@ public class ProcessFile {
                 continue;
             }
             List<String> fields = parseCSVLine(line);
-            if (fields.size() < 19) {
+            if (fields.isEmpty()) {
                 continue;
             }
             String nctId = fields.get(0).trim();
-            if (nctId == null || nctId.isEmpty() || nctId.equals("null")) {
+            if (nctId.isEmpty() || nctId.equals("null")) {
                 continue;
             }
-
-
-
 
             ClinicalTrialRecord record = new ClinicalTrialRecord();
             record.setNctId(nctId);
             record.setRecordStatus(recordStatus);
 
             try {
-                System.out.println("ROW " + rowNum + "\t" + nctId + "\tRecord Status:"+recordStatus);
+                System.out.println("ROW " + rowNum + "\t" + nctId + "\tRecord Status:" + recordStatus);
                 clinicalTrailDAO.updateRecordStatus(record);
             } catch (Exception e) {
                 System.out.println("Error updating: " + nctId);
